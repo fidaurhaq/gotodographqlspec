@@ -2,17 +2,23 @@ package todospec
 
 import (
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/segmentio/ksuid"
 )
 
 // Schema for graphql which describes the stucture of its queries, data and mutations
 var Schema = `
 	schema {
 		query: Query
+		mutation: Mutation
 	}
 
 	type Query {
 		todo(id: ID!): Todo
 		alltodos: [Todo]!
+	}
+
+	type Mutation {
+		createTodo(label: String!, doneStatus: Boolean!): Todo
 	}
 
 	type Todo{
@@ -23,7 +29,7 @@ var Schema = `
 `
 
 type todo struct {
-	ID         graphql.ID
+	ID         string
 	Label      string
 	DoneStatus bool
 }
@@ -41,7 +47,7 @@ var todos = []*todo{
 	},
 }
 
-var todoData = make(map[graphql.ID]*todo)
+var todoData = make(map[string]*todo)
 
 func init() {
 	for _, t := range todos {
@@ -53,7 +59,7 @@ func init() {
 type Resolver struct{}
 
 // Todo returns a single todo based on ID
-func (r *Resolver) Todo(args struct{ ID graphql.ID }) *todoResolver {
+func (r *Resolver) Todo(args struct{ ID string }) *todoResolver {
 	if t := todoData[args.ID]; t != nil {
 		return &todoResolver{t}
 	}
@@ -69,12 +75,28 @@ func (r *Resolver) Alltodos() []*todoResolver {
 	return tl
 }
 
+func (r *Resolver) CreateTodo(args *struct {
+	Label      string
+	DoneStatus bool
+}) *todoResolver {
+	mytodo := &todo{
+		Label:      args.Label,
+		DoneStatus: args.DoneStatus,
+	}
+	mytodo.ID = ksuid.New().String()
+	todos = append(todos, mytodo)
+	for _, t := range todos {
+		todoData[t.ID] = t
+	}
+	return &todoResolver{mytodo}
+}
+
 type todoResolver struct {
 	t *todo
 }
 
 func (r *todoResolver) ID() graphql.ID {
-	return r.t.ID
+	return graphql.ID(r.t.ID)
 }
 
 func (r *todoResolver) Label() string {
