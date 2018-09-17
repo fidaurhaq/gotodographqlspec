@@ -19,6 +19,8 @@ var Schema = `
 
 	type Mutation {
 		createTodo(label: String!, doneStatus: Boolean!): Todo
+		updateTodo(id: ID!, label: String!, doneStatus: Boolean!) : Todo
+		deleteTodo(id: ID!) : Todo
 	}
 
 	type Todo{
@@ -75,6 +77,7 @@ func (r *Resolver) Alltodos() []*todoResolver {
 	return tl
 }
 
+// CreateTodo appends list of current todos with a new todo with a new guid
 func (r *Resolver) CreateTodo(args *struct {
 	Label      string
 	DoneStatus bool
@@ -87,6 +90,42 @@ func (r *Resolver) CreateTodo(args *struct {
 	todos = append(todos, mytodo)
 	for _, t := range todos {
 		todoData[t.ID] = t
+	}
+	return &todoResolver{mytodo}
+}
+
+// UpdateTodo finds the todo using ID and updates it accordindly
+func (r *Resolver) UpdateTodo(args *struct {
+	ID         string
+	Label      string
+	DoneStatus bool
+}) *todoResolver {
+	mytodo := &todo{
+		ID:         args.ID,
+		Label:      args.Label,
+		DoneStatus: args.DoneStatus,
+	}
+
+	for _, t := range todoData {
+		if t.ID == args.ID {
+			todoData[t.ID] = mytodo
+		}
+	}
+	return &todoResolver{mytodo}
+}
+
+// DeleteTodo finds the todo using ID and deletes it
+func (r *Resolver) DeleteTodo(args *struct {
+	ID         string
+	Label      string
+	DoneStatus bool
+}) *todoResolver {
+	mytodo := &todo{}
+	for _, t := range todoData {
+		if t.ID == args.ID {
+			mytodo = todoData[args.ID]
+			delete(todoData, args.ID)
+		}
 	}
 	return &todoResolver{mytodo}
 }
